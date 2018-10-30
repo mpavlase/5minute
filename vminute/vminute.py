@@ -988,6 +988,8 @@ class BootInstanceClass(ServerClass):
                 params['noip'] = True
             elif key == '--userdata':
                 params['userdata'] = val
+            elif key == '--result-dir':
+                params['result_dir'] = val
             else:
                 die("Bad parameter '%s'. Please try 5minute boot --help." % key)
         if len(argv) != 1:
@@ -1004,7 +1006,7 @@ class BootInstanceClass(ServerClass):
         opts, argv = \
             getopt.gnu_getopt(argv, "hcf:n:v:p:",
                               ['help', 'console', 'flavor=', 'name=', 'volume=',
-                               'userdata=', 'novolume', 'noip'])
+                               'userdata=', 'novolume', 'noip', 'result-dir='])
         self.params = self.__parse_params(opts, argv)
         if 'help' in self.params:
             self.help()
@@ -1090,6 +1092,7 @@ class BootInstanceClass(ServerClass):
             raise Exception("Problem getting an IP address.")
         else:
             floating_ip = floating_ip['floatingip']
+        self._write_artifact_file('floating-ip', floating_ip['floating_ip_address'])
         self.add_variable('floating-ip', floating_ip)
         self.add_variable('private-net', network['private']['id'])
         progress(result=floating_ip['floating_ip_address'])
@@ -1196,6 +1199,15 @@ class BootInstanceClass(ServerClass):
         self.output_cache = output[-1*self.output_compare_lines:]
         return output
 
+    def _write_artifact_file(self, name, value):
+        basedir = self.params.get('result_dir')
+        if not os.path.exists(basedir):
+            os.mkdir(basedir)
+
+        path = os.path.join(basedir, name)
+        with open(path, 'w+') as fd:
+            fd.write(value)
+
     def __create_instance(self, image):
         progress(title="Instance name:", result=self.variables.get('name'))
         progress("Creating a new instance:")
@@ -1218,6 +1230,7 @@ class BootInstanceClass(ServerClass):
             progress()
             status = self.nova.servers.get(server.id).status
         if status == 'ACTIVE':
+            self._write_artifact_file('instance-id', server.id)
             progress(result="DONE")
         else:
             progress(result="FAIL")
