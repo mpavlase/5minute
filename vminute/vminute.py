@@ -1020,6 +1020,8 @@ class BootInstanceClass(ServerClass):
                 params['noip'] = True
             elif key == '--userdata':
                 params['userdata'] = val
+            elif key == '--key-name':
+                self.key_name = val
             else:
                 die("Bad parameter '%s'. Please try 5minute boot --help." % key)
         if len(argv) != 1:
@@ -1092,8 +1094,8 @@ class BootInstanceClass(ServerClass):
                 self.__release_resources()
                 die(str(ex), exception=ex)
 
-    def help(self):
-        print("""
+    def get_help_content(self):
+        return """
          Usage: 5minute boot [PARAM]  <IMAGE-NAME|IMAGE-ID>
          Boot a new instance.
 
@@ -1104,10 +1106,15 @@ class BootInstanceClass(ServerClass):
               --novolume      no volume snapshot
               -c, --console   display the console output during booting
               --userdata      the paths or URLs to cloud-init scripts
+              --key-file      name of keypair in OpenStack cluster
 
          Examples:
              5minute boot 5minute-RHEL6
-         """)
+         """
+
+    def help(self):
+        # TODO: use inherited method from BaseClass that does the same
+        print(self.get_help_content())
 
     def __setup_networking(self):
         progress(title='Choosing a private network:')
