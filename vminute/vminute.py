@@ -1552,7 +1552,7 @@ def main(argv):
         if len(argv) > 0:
             cmd = argv.pop(0)
     if cmd is None or cmd in ('help', '--help', '-h'):
-        BaseClass().cmd(argv)
+        BaseClass().help()
     elif cmd == 'key':
         KeyClass().cmd(argv)
     elif cmd == 'images':
