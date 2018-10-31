@@ -2,6 +2,7 @@
 
 import fcntl
 import getopt
+import argparse
 import math
 import os
 import random
@@ -357,10 +358,43 @@ class BaseClass(object):
         return xmltodict.parse(xml)
 
     def cmd(self, argv):
-        self.help()
+        pass
 
-    def help(self):
-        print("""
+    def parse_args(self, argv):
+        """
+        Parse expected arguments and returns also the rest for further
+        processing.
+
+        Returns: tuple (know, unknown) arguments
+
+        """
+        parser = argparse.ArgumentParser(description=self.get_help_content())
+
+        parser.add_argument('--key-name', required=False,
+                            help='Optinal key name (label) in OpenStack '
+                                 'cluster')
+
+        self.update_arguments_parser(parser)
+
+        arguments, unknownargs = parser.parse_known_args(argv)
+        if arguments.key_name:
+            self.key_name = arguments.key_name
+
+        return arguments, unknownargs
+
+    def update_arguments_parser(self, parser):
+        """
+        Use parser.add_argument() to add extra arguments into parser.
+        It's passed as reference, so no return is needed.
+
+        Args:
+            parser: ArgumentParser instance
+
+        """
+        pass
+
+    def get_help_content(self):
+        return """
             Usage: 5minute <-d|--debug>  [COMMAND]
             Manager for your OpenStack machines.
 
@@ -394,7 +428,10 @@ class BaseClass(object):
                 5minute boot --name myRHEL6 5minute-RHEL6
                 5minute snapshot --help
                 5minute scenarios --help
-        """)
+        """
+
+    def help(self):
+        print(self.get_help_content())
 
 
 class KeyClass(BaseClass):
@@ -407,20 +444,16 @@ class KeyClass(BaseClass):
             self.nova.keypairs.create(self.key_name, fd.read())
             print(("The key %s was uploaded successfully." % key))
 
+    def update_arguments_parser(self, parser):
+        parser.add_argument('keyfile', help='Path to public key file i.e. '
+                                            '~/.ssh/id_dsa.pub')
+
     def cmd(self, argv):
-        if len(argv) == 0 or argv[0] in ('help', '--help', '-h'):
-            self.help()
-        else:
-            self.__upload_key(argv[0])
+        arguments, _ = self.parse_args(argv)
+        self.__upload_key(arguments.keyfile)
 
-    def help(self):
-        print("""
-            Usage: 5minute key <SSH-PUB-KEY>
-            Upload your SSH key to the OpenStack server.
-
-            Examples:
-                5minute key ~/.ssh/id_dsa.pub
-            """)
+    def get_help_content(self):
+        return 'Upload your SSH key to the OpenStack server.'
 
 
 class ImagesClass(BaseClass):
