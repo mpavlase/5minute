@@ -204,9 +204,46 @@ def get_FQDN_from_IP(ip):
 # -----------------------------------------------------------
 # Classes
 # -----------------------------------------------------------
+class BaseUpdateArgumentParser(object):
+    """
+    Use parser.add_argument() to add extra arguments into parser.
+    It's passed as reference, so no return is needed.
+
+    Args:
+        parser: ArgumentParser instance
+    """
+    def update_arguments_parser(self, parser):
+        pass
+
+    def process_arguments(self, arguments, unknownargs):
+        """
+        Do whatever is needed with parsed arguments.
+
+        Args:
+            arguments: sucessfully parsed arguments
+            unknownargs: arguments not recoginzed by ArgumentParser
+
+        """
+        pass
 
 
-class BaseClass(object):
+class KeyNameArgumentMixin(BaseUpdateArgumentParser):
+    """
+    Allow to optionally pass key-name CLI argument.
+    """
+    def update_arguments_parser(self, parser):
+        super(KeyNameArgumentMixin, self).update_arguments_parser(parser)
+        parser.add_argument('--key-name', required=False,
+                            help='Optinal key name (label) in OpenStack '
+                                 'cluster')
+
+    def process_arguments(self, arguments, unknownargs):
+        super(KeyNameArgumentMixin, self).process_arguments(arguments,
+                                                            unknownargs)
+        self.key_name = arguments.key_name
+
+
+class BaseClass(BaseUpdateArgumentParser):
     __nova = None
     __keystone = None
     __cinder = None
@@ -370,28 +407,12 @@ class BaseClass(object):
         """
         parser = argparse.ArgumentParser(description=self.get_help_content())
 
-        parser.add_argument('--key-name', required=False,
-                            help='Optinal key name (label) in OpenStack '
-                                 'cluster')
-
         self.update_arguments_parser(parser)
 
         arguments, unknownargs = parser.parse_known_args(argv)
-        if arguments.key_name:
-            self.key_name = arguments.key_name
+        self.process_arguments(arguments, unknownargs)
 
         return arguments, unknownargs
-
-    def update_arguments_parser(self, parser):
-        """
-        Use parser.add_argument() to add extra arguments into parser.
-        It's passed as reference, so no return is needed.
-
-        Args:
-            parser: ArgumentParser instance
-
-        """
-        pass
 
     def get_help_content(self):
         return """
@@ -434,7 +455,7 @@ class BaseClass(object):
         print(self.get_help_content())
 
 
-class KeyClass(BaseClass):
+class KeyClass(BaseClass, KeyNameArgumentMixin):
 
     @catch_exception("The problem with public key upload.")
     def __upload_key(self, key):
